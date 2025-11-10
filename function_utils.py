@@ -5,6 +5,7 @@ import numpy as np
 import sympy as sp
 import matplotlib.pyplot as plt
 import re
+import pickle
 
 SIMPLIFICATION_THRESHOLD = 6
 
@@ -128,3 +129,18 @@ def plot_example(expr: sp.Expr):
     plt.grid(True)
     plt.legend()
     plt.show()
+
+def load_sympy_to_np_array(path: str) -> np.ndarray:
+    """
+    Load a pickle file containing a list of SymPy expressions
+    and return a NumPy array where each row is the evaluation
+    of one expression over XS using gen_values.
+    """
+    # Load the pickled expressions
+    with open(path, "rb") as f:
+        expr_list = pickle.load(f)  # expected: list of sp.Expr
+    
+    # Evaluate each expression and stack into a 2D array
+    data_array = np.array([gen_values(expr) for expr in expr_list])
+    
+    return data_array

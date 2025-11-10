@@ -30,7 +30,7 @@ def main():
     print()
 
     # Save numeric arrays as NPY
-    np.savetxt("X_comp_1_3.npy", X, delimiter=",", fmt="%.10f")
+    # np.savetxt("X_comp_1_3.npy", X, delimiter=",", fmt="%.10f")
     np.savetxt("y_comp_1_3.npy", y, delimiter=",", fmt="%.10f")
     
     # Pickle SymPy expressions and strings
