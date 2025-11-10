@@ -7,7 +7,7 @@ x = sp.symbols('x')
 
 def main():
     rng = np.random.default_rng(229)
-    n_examples = 400
+    n_examples = 4000
     samples = function_utils.SAMPLES
 
     X = np.zeros((n_examples, samples))
