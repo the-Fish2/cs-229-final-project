@@ -6,10 +6,12 @@ import sympy as sp
 import matplotlib.pyplot as plt
 import re
 
+SIMPLIFICATION_THRESHOLD = 6
+
 # Domain under consideration
-DOMAIN_LOW = -100
-DOMAIN_HIGH = 100
-SAMPLES = 400
+DOMAIN_LOW = -10
+DOMAIN_HIGH = 10
+SAMPLES = 500
 
 # Coefficients to scale / add functions when generating
 # Picked from uniform log distribution
@@ -74,15 +76,16 @@ def gen_random_example(rng: np.random.Generator, complexity: int) -> sp.Expr:
     if args == 1:
         # Apply a unary function on a single function of one less complexity
         while True:
-            ret = random_affine(rng, rng.choice(UNARY).subs(x, gen_random_example(rng, complexity - 1)))
-            if validate(ret): return ret
+            func_a = gen_random_example(rng, complexity - 1)
+            ret = random_affine(rng, rng.choice(UNARY).subs(x, func_a))
+            if len(get_string(ret)) + SIMPLIFICATION_THRESHOLD >= len(get_string(func_a)) and validate(ret): return ret
     else:
         # Apply a binary function on two functions whose complexities sum to one less
         a_complexity = rng.choice(np.arange(0, complexity))
         while True:
             func_a, func_b = gen_random_example(rng, a_complexity), gen_random_example(rng, complexity - 1 - a_complexity)
             ret = random_affine(rng, rng.choice(BINARY).subs(x, func_a).subs(y, func_b))
-            if validate(ret): return ret
+            if len(get_string(ret)) + SIMPLIFICATION_THRESHOLD >= len(get_string(func_a)) + len(get_string(func_b)) and validate(ret): return ret
     
 # Process any decimals that didn't get truncated
 def repl(match):
