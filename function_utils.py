@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 import re
 
 # Domain under consideration
-DOMAIN_LOW = -1
-DOMAIN_HIGH = 1
+DOMAIN_LOW = -100
+DOMAIN_HIGH = 100
 SAMPLES = 400
 
 # Coefficients to scale / add functions when generating
@@ -27,7 +27,7 @@ UNARY = [sp.exp(x), sp.log(x), sp.sin(x), sp.cos(x), sp.tan(x)]
 BINARY = [x + y, x - y, x * y, x / y, x ** y]
 
 def gen_coeff(rng: np.random.Generator) -> np.float64:
-    return np.exp(rng.uniform(np.log(COEFF_LOW), np.log(COEFF_HIGH)))
+    return rng.choice([-1, 1]) * np.exp(rng.uniform(np.log(COEFF_LOW), np.log(COEFF_HIGH)))
 
 def gen_bias(rng: np.random.Generator) -> np.float64:
     return rng.normal(0, BIAS_VAR)
