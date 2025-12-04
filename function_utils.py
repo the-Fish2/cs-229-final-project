@@ -79,6 +79,7 @@ def gen_random_example(rng: np.random.Generator, complexity: int) -> sp.Expr:
         while True:
             func_a = gen_random_example(rng, complexity - 1)
             ret = random_affine(rng, rng.choice(UNARY).subs(x, func_a))
+            # To prevent getting a lower complexity function, only return if the complexity is actually greater
             if len(get_string(ret)) + SIMPLIFICATION_THRESHOLD >= len(get_string(func_a)) and validate(ret): return ret
     else:
         # Apply a binary function on two functions whose complexities sum to one less
@@ -88,6 +89,73 @@ def gen_random_example(rng: np.random.Generator, complexity: int) -> sp.Expr:
             ret = random_affine(rng, rng.choice(BINARY).subs(x, func_a).subs(y, func_b))
             if len(get_string(ret)) + SIMPLIFICATION_THRESHOLD >= len(get_string(func_a)) + len(get_string(func_b)) and validate(ret): return ret
     
+# ------------------------------------------------------------
+# New utilities for generating all expressions of given complexity
+# ------------------------------------------------------------
+
+# Create indexed affine symbols
+def affine_symbols(i: int):
+    return sp.symbols(f"a{i} b{i}")
+
+def apply_affine(expr: sp.Expr, i: int):
+    ai, bi = affine_symbols(i)
+    return ai * expr + bi
+
+# Main generator
+def gen_all_complexity(complexity: int, next_id: int = 0):
+    """
+    Generate ALL expressions of the given complexity.
+    Returns list of (expr, m) where:
+        expr = sympy expression
+        m    = # of affine transforms used (so symbols are x and a0..a(m-1), b0..b(m-1))
+    next_id = starting index for affine parameters
+    """
+    results = []
+
+    # -------------------------------------------
+    # Base case: complexity = 0 → a0*x + b0
+    # -------------------------------------------
+    if complexity == 0:
+        expr = apply_affine(x, next_id)
+        return [(expr, 1)]  # one affine used
+
+    # -------------------------------------------
+    # Unary case: apply each unary function to child
+    # -------------------------------------------
+    # child complexity is complexity - 1
+    children = gen_all_complexity(complexity - 1, next_id)
+
+    for func in UNARY:
+        for child_expr, child_m in children:
+            # Substitute x inside the unary template
+            new_core = func.subs(x, child_expr)
+            # Apply a new affine layer using index next_id + child_m
+            expr = apply_affine(new_core, next_id + child_m)
+            results.append((expr, child_m + 1))
+
+    # -------------------------------------------
+    # Binary case: split complexity-1 into two parts
+    # -------------------------------------------
+    total_child_complexity = complexity - 1
+
+    for cA in range(total_child_complexity + 1):
+        cB = total_child_complexity - cA
+
+        childrenA = gen_all_complexity(cA, next_id)
+        for (exprA, mA) in childrenA:
+            # childrenB must start after A's affine symbols
+            childrenB = gen_all_complexity(cB, next_id + mA)
+            for (exprB, mB) in childrenB:
+
+                for func in BINARY:
+                    # Build binary template: func(x, y)
+                    new_core = func.subs({x: exprA, y: exprB})
+                    # Apply a new affine layer after all child affines
+                    expr = apply_affine(new_core, next_id + mA + mB)
+                    results.append((expr, mA + mB + 1))
+
+    return results
+
 # Process any decimals that didn't get truncated
 def repl(match):
     return f"{float(match.group()):.3f}"
