@@ -7,6 +7,41 @@ import matplotlib.pyplot as plt
 from function_utils import gen_all_complexity, XS, x, gen_values, validate, get_string
 from init_affine import init_affine_values
 
+def fft_loss_fn(pred, target, delta=1.0):
+    # Step 1: Perform FFT on the predicted and target signals
+    pred_fft = tf.signal.fft(tf.cast(pred, tf.complex64))  # FFT on predicted signal
+    target_fft = tf.signal.fft(tf.cast(target, tf.complex64))  # FFT on target signal
+    
+    # Step 2: Extract real and imaginary parts of the Fourier coefficients
+    pred_real = tf.math.real(pred_fft)  # Real part of the FFT of predicted signal
+    target_real = tf.math.real(target_fft)  # Real part of the FFT of target signal
+    pred_imag = tf.math.imag(pred_fft)  # Imaginary part of the FFT of predicted signal
+    target_imag = tf.math.imag(target_fft)  # Imaginary part of the FFT of target signal
+    
+    # Step 3: Compute the error between real and imaginary parts
+    print(pred_real, target_real, pred_imag, target_imag)
+    print("wahoo")
+    real_err = pred_real - target_real
+    imag_err = pred_imag - target_imag
+    
+    # Step 4: Compute absolute errors
+    abs_real_err = tf.abs(real_err)
+    abs_imag_err = tf.abs(imag_err)
+    
+    # Step 5: Apply smooth L1 loss (Huber loss) for both real and imaginary parts
+    real_quad = tf.minimum(abs_real_err, delta)  # Quadratic part for real
+    imag_quad = tf.minimum(abs_imag_err, delta)  # Quadratic part for imaginary
+    
+    real_lin = abs_real_err - real_quad  # Linear part for real
+    imag_lin = abs_imag_err - imag_quad  # Linear part for imaginary
+    
+    # Step 6: Total loss as sum of the losses for real and imaginary parts
+    loss = tf.reduce_sum(0.5 * tf.square(real_quad) + delta * real_lin) + \
+           tf.reduce_sum(0.5 * tf.square(imag_quad) + delta * imag_lin)
+
+    return loss
+
+
 # -----------------------------
 # Hyperparameters
 # -----------------------------
@@ -87,18 +122,24 @@ def fit_expr(expr_template, f_sampled):
     XS_tf = tf.convert_to_tensor(XS, dtype=tf.float32)
     f_sampled_tf = tf.convert_to_tensor(f_sampled, dtype=tf.float32)
 
-    # ---------------------------------------------------
-    # Helper: run GD for a fixed number of steps
-    # ---------------------------------------------------
-    def run_GD(param_dict, steps):
+    XS_tf = tf.convert_to_tensor(XS, dtype=tf.float32)  # Input tensor (still float32)
+    f_sampled_tf = tf.convert_to_tensor(f_sampled, dtype=tf.float32)  # Target tensor (float32)
 
+    # Ensure these tensors are treated as complex64 in the loss calculation
+    XS_tf_complex = tf.cast(XS_tf, tf.complex64)  # Cast to complex64
+    f_sampled_tf_complex = tf.cast(f_sampled_tf, tf.complex64)  # Cast to complex64
+
+    # Continue with the rest of your function...
+    def run_GD(param_dict, steps):
         f_tf, tf_vars = sympy_to_tf(expr_template, param_dict)
         opt = tf.keras.optimizers.Adam(GD_LEARNING_RATE)
 
         for _ in range(steps):
             with tf.GradientTape() as tape:
-                preds = f_tf(XS_tf)
-                loss = loss_fn(preds, f_sampled_tf)
+                preds = f_tf(XS_tf_complex)  # Pass complex-valued input
+                # Use the FFT-based loss function that considers both real and imaginary parts
+                print('wooo')
+                loss = fft_loss_fn(preds, f_sampled_tf_complex)  # Use complex tensors for loss calculation
 
             grads = tape.gradient(loss, list(tf_vars.values()))
             opt.apply_gradients(zip(grads, list(tf_vars.values())))
