@@ -2,7 +2,7 @@
 
 import numpy as np
 import sympy as sp
-import tensorflow as tf
+import tensorflow as tfs
 import matplotlib.pyplot as plt
 from function_utils import gen_all_complexity, XS, x, gen_values, validate, get_string
 from init_affine import init_affine_values
@@ -68,7 +68,7 @@ def loss_fn(pred, target, delta=1.0):
 
 def fit_expr(expr_template, f_sampled):
 
-    # if 'exp' not in get_string(expr_template):
+    # if 'log' not in get_string(expr_template):
     #     return (0, 0, 1e12)
 
     print("Fitting template:", expr_template)
