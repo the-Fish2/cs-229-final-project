@@ -67,9 +67,8 @@ def loss_fn(pred, target, delta=1.0):
     return tf.reduce_sum(0.5 * tf.square(quad) + delta * lin)
 
 def fit_expr(expr_template, f_sampled):
-
-    # if 'exp' not in get_string(expr_template):
-    #     return (0, 0, 1e12)
+    if 'log' not in get_string(expr_template):
+        return (0, 0, 1e12)
 
     print("Fitting template:", expr_template)
 
@@ -121,7 +120,9 @@ def fit_expr(expr_template, f_sampled):
             continue
         _, param_dict = res
 
+        print("hello?")
         loss, params = run_GD(param_dict, STEPS_INITIAL)
+        print(loss, params)
         candidates.append((loss, params))
 
     if not candidates:

@@ -22,6 +22,10 @@ COEFF_HIGH = 10
 BIAS_VAR = 1
 XS = np.linspace(DOMAIN_LOW, DOMAIN_HIGH, SAMPLES)
 
+# def softplus(x):
+#     print(x)
+#     return np.log(1 + np.exp(x))
+
 # Functions under consideration
 x = sp.symbols('x')
 y = sp.symbols('y')
@@ -41,14 +45,21 @@ def random_affine(rng: np.random.Generator, expr: sp.Expr):
 import numpy as np
 import sympy as sp
 
-def gen_values(expr: sp.Expr) -> np.ndarray:
+def gen_values(expr: sp.Expr, XS) -> np.ndarray:
     """
     Evaluate a SymPy expression over an array XS safely.
     Replaces invalid, infinite, or complex values with np.nan.
     """
+    # print("THIS EXPR IS " , expr)
+
+    # if 'log' in get_string(expr):
+    #     DOMAIN_LOW = 0
+    #     XS = np.linspace(DOMAIN_LOW, DOMAIN_HIGH, SAMPLES//2)
+    # else:
+    #     XS = np.linspace(DOMAIN_LOW, DOMAIN_HIGH, SAMPLES//2)
+    print("hello?")
     # Convert symbolic expression to numeric function
     f = sp.lambdify(sp.symbols('x'), expr, modules=['numpy'])
-    
     # Evaluate safely
     with np.errstate(divide='ignore', invalid='ignore', over='ignore'):
         ys = f(XS)
@@ -60,10 +71,11 @@ def gen_values(expr: sp.Expr) -> np.ndarray:
         ys[np.iscomplex(ys)] = np.nan
         ys = ys.real  # convert back to float
     
+    print("YS", ys)
     return ys
 
 def validate(expr: sp.Expr) -> bool:
-    return not np.any(np.isnan(gen_values(expr)))
+    return not np.any(np.isnan(gen_values(expr, XS)))
 
 # Issue: Constants are identified as zero complexity, same as linear functions; maybe should be lower
 
@@ -180,7 +192,7 @@ def plot_example(expr: sp.Expr):
     import matplotlib.pyplot as plt
     import numpy as np
     
-    ys = gen_values(expr)
+    ys = gen_values(expr, XS)
 
     # Clip extreme values to avoid huge spikes
     ys = np.where(np.abs(ys) > 10, np.nan, ys)
@@ -209,6 +221,6 @@ def load_sympy_to_np_array(path: str) -> np.ndarray:
         expr_list = pickle.load(f)  # expected: list of sp.Expr
     
     # Evaluate each expression and stack into a 2D array
-    data_array = np.array([gen_values(expr) for expr in expr_list])
+    data_array = np.array([gen_values(expr, XS) for expr in expr_list])
     
     return data_array

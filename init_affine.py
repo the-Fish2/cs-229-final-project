@@ -30,8 +30,9 @@ def init_affine_values(expr, XS, rng):
     filled = expr.subs(param_dict)
 
     # Check power bases > EPS
-    ys = gen_values(filled)
-    if np.any(ys < -1e10) or np.any(np.isnan(ys)):
+    ys = gen_values(filled, XS)
+    print("YS returned, " , ys)
+    if np.any(ys < -1e100) or np.any(np.isnan(ys)):
         return None
 
     return filled, param_dict
