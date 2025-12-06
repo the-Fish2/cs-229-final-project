@@ -13,7 +13,7 @@ from init_affine import init_affine_values
 GD_MAX_COMPLEXITY = 1
 GD_COEFF_INIT_TRIES = 10
 GD_LEARNING_RATE = 0.01
-GD_STEPS = 150
+GD_STEPS = 500
 
 RNG = np.random.default_rng(42)
 
@@ -66,66 +66,113 @@ def loss_fn(pred, target, delta=1.0):
     lin = abs_err - quad 
     return tf.reduce_sum(0.5 * tf.square(quad) + delta * lin)
 
-# -----------------------------
-# Fit a single expression to f_sampled
-# -----------------------------
 def fit_expr(expr_template, f_sampled):
-    if 'exp' not in get_string(expr_template): return (0,0,1000000000000)
-    print('fitting template', expr_template)
-    best_loss = np.inf
-    best_params = None
 
-    for _ in range(GD_COEFF_INIT_TRIES):
-        res = init_affine_values(expr_template, XS, RNG)
-        if res is None:
-            continue
-        expr_filled, param_dict = res
+    # if 'exp' not in get_string(expr_template):
+    #     return (0, 0, 1e12)
 
-        # Convert to TF function
+    print("Fitting template:", expr_template)
+
+    # ---------------------------------------------------
+    # Hyperparameters for multi-stage refinement
+    # ---------------------------------------------------
+    ROUNDS = 4                  # number of refinement stages
+    INIT_CANDIDATES = 12        # how many starting points
+    KEEP_TOP = 3                # survivors per round
+    STEPS_INITIAL = 120         # GD steps for round 0
+    STEPS_REFINE = 80           # GD steps for rounds 1+
+    NOISE_SCALE = 0.35          # relative noise added to params
+    NOISE_DECAY = 0.5           # how much noise shrinks each round
+
+    XS_tf = tf.convert_to_tensor(XS, dtype=tf.float32)
+    f_sampled_tf = tf.convert_to_tensor(f_sampled, dtype=tf.float32)
+
+    # ---------------------------------------------------
+    # Helper: run GD for a fixed number of steps
+    # ---------------------------------------------------
+    def run_GD(param_dict, steps):
+
         f_tf, tf_vars = sympy_to_tf(expr_template, param_dict)
-
         opt = tf.keras.optimizers.Adam(GD_LEARNING_RATE)
-        XS_tf = tf.convert_to_tensor(XS, dtype=tf.float32)
-        f_sampled_tf = tf.convert_to_tensor(f_sampled, dtype=tf.float32)
 
-        # Track loss during gradient descent
-        loss_history = []
-
-        # Gradient descent loop
-        for _ in range(GD_STEPS):
-            print(tf_vars)
+        for _ in range(steps):
             with tf.GradientTape() as tape:
                 preds = f_tf(XS_tf)
-                preds_tf = tf.convert_to_tensor(preds, dtype=tf.float32)
-                loss = loss_fn(preds_tf, f_sampled_tf)
-            loss_history.append(loss.numpy())
+                loss = loss_fn(preds, f_sampled_tf)
+
             grads = tape.gradient(loss, list(tf_vars.values()))
             opt.apply_gradients(zip(grads, list(tf_vars.values())))
 
-        # Plot loss curve for this initialization
-        plt.figure(figsize=(5,3))
-        plt.plot(loss_history)
-        plt.xlabel("Step")
-        plt.ylabel("Loss")
-        plt.title("Gradient Descent Loss Curve")
-        plt.grid(True)
-        plt.show()
-        print('gd to', expr_template.subs({s: tf_vars[s].numpy() for s in tf_vars}))
+        # Final loss (numpy)
+        preds_final = f_tf(XS_tf).numpy()
+        final_loss = np.sum((preds_final - f_sampled)**2)
 
-        # Evaluate final loss
-        preds_final = f_tf(XS)
-        final_loss = np.sum((preds_final - f_sampled) ** 2)
+        final_params = {s: tf_vars[s].numpy() for s in tf_vars}
+        return final_loss, final_params
 
-        if final_loss < best_loss:
-            best_loss = final_loss
-            best_params = {s: tf_vars[s].numpy() for s in tf_vars}
+    # ---------------------------------------------------
+    # ROUND 0 → Random initialization of all candidates
+    # ---------------------------------------------------
+    candidates = []
 
-    if best_params is None:
+    for _ in range(INIT_CANDIDATES):
+        res = init_affine_values(expr_template, XS, RNG)
+        if res is None:
+            continue
+        _, param_dict = res
+
+        loss, params = run_GD(param_dict, STEPS_INITIAL)
+        candidates.append((loss, params))
+
+    if not candidates:
         return None, None, np.inf
 
-    best_expr_filled = expr_template.subs(best_params)
-    print('best found:', best_expr_filled)
-    return best_expr_filled, best_params, best_loss
+    # Sort best → worst
+    candidates.sort(key=lambda t: t[0])
+    candidates = candidates[:KEEP_TOP]
+
+    # ---------------------------------------------------
+    # REFINEMENT ROUNDS
+    # ---------------------------------------------------
+    noise = NOISE_SCALE
+
+    for round_idx in range(1, ROUNDS + 1):
+        print(f"Refinement round {round_idx}: best loss so far = {candidates[0][0]:.6f}")
+
+        new_candidates = []
+
+        # take top survivors
+        for loss, params in candidates:
+            new_candidates.append((loss, params))
+
+        # create new noisy candidates around the best one
+        best_loss, best_params = candidates[0]
+
+        for _ in range(INIT_CANDIDATES - KEEP_TOP):
+
+            # produce a noisy copy
+            noisy_params = {}
+            for k,v in best_params.items():
+                noisy_params[k] = float(v + noise * v * RNG.normal())
+
+            loss, fitted_params = run_GD(noisy_params, STEPS_REFINE)
+            new_candidates.append((loss, fitted_params))
+
+        # sort survivors
+        new_candidates.sort(key=lambda t: t[0])
+        candidates = new_candidates[:KEEP_TOP]
+
+        # shrink noise
+        noise *= NOISE_DECAY
+
+    # ---------------------------------------------------
+    # Best after all refinement rounds
+    # ---------------------------------------------------
+    best_loss, best_params = candidates[0]
+    best_expr = expr_template.subs(best_params)
+
+    print("Best found:", best_expr)
+    return best_expr, best_params, best_loss
 
 # -----------------------------
 # Main fitting function: loop over all complexities

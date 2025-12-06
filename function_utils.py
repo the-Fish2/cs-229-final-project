@@ -12,7 +12,7 @@ SIMPLIFICATION_THRESHOLD = 6
 # Domain under consideration
 DOMAIN_LOW = -10
 DOMAIN_HIGH = 10
-SAMPLES = 500
+SAMPLES = 5000
 
 # Coefficients to scale / add functions when generating
 # Picked from uniform log distribution

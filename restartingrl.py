@@ -214,6 +214,7 @@ class DQNAgent:
             q_values = self.policy_net(state_tensor)
             return q_values.argmax().item()
 
+    @tf.function(jit_compile=True)
     def train_step(self):
         """Perform one training step"""
         if len(self.memory) < self.batch_size:
