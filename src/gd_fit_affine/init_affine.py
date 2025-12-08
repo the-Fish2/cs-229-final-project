@@ -1,7 +1,7 @@
 # main.py
 import numpy as np
 import sympy as sp
-from function_utils import (
+from src.utils.function_utils import (
     gen_all_complexity, XS, x, gen_values, validate, plot_example, y
 )
 

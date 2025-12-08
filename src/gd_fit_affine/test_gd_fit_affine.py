@@ -1,8 +1,8 @@
 # test_gd_fit_affine.py
 import numpy as np
 import sympy as sp
-from function_utils import gen_random_example, XS
-from gd_fit_affine import fit_best_function
+from src.utils.function_utils import gen_random_example, XS
+from src.gd_fit_affine.gd_fit_affine import fit_best_function
 
 # Generate a target function
 RNG = np.random.default_rng(123)

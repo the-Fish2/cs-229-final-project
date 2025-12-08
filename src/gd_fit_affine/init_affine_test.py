@@ -2,8 +2,8 @@ import numpy as np
 import sympy as sp
 import matplotlib.pyplot as plt
 
-from function_utils import gen_all_complexity, XS, validate, plot_example
-from init_affine import init_affine_values, RNG
+from src.utils.function_utils import gen_all_complexity, XS, validate, plot_example
+from src.gd_fit_affine.init_affine import init_affine_values, RNG
 
 # ------------------------------------------------------------
 # Generate all complexity-2 expressions

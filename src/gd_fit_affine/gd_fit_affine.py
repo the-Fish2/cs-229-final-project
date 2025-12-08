@@ -2,10 +2,10 @@
 
 import numpy as np
 import sympy as sp
-import tensorflow as tfs
+import tensorflow as tf
 import matplotlib.pyplot as plt
-from function_utils import gen_all_complexity, XS, x, gen_values, validate, get_string
-from init_affine import init_affine_values
+from src.utils.function_utils import gen_all_complexity, XS, x, gen_values, validate, get_string
+from src.gd_fit_affine.init_affine import init_affine_values
 
 # -----------------------------
 # Hyperparameters
@@ -20,11 +20,6 @@ RNG = np.random.default_rng(42)
 # -----------------------------
 # Convert sympy expression with a_i/b_i to TensorFlow variables
 # -----------------------------
-import tensorflow as tf
-import sympy as sp
-from function_utils import x  # make sure this is the same x symbol used in your expressions
-import tensorflow as tf
-import sympy as sp
 
 def sympy_to_tf(expr, param_dict):
     """

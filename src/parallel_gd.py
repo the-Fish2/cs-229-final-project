@@ -6,8 +6,8 @@ import sympy as sp
 import os
 import multiprocessing as mp
 
-from function_utils import gen_random_example, XS
-from gd_fit_affine import fit_best_function
+from src.utils.function_utils import gen_random_example, XS
+from src.gd_fit_affine.gd_fit_affine import fit_best_function
 import tensorflow as tf
 
 def worker(seedseq):
