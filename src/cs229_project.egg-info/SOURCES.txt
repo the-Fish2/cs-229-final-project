@@ -1,0 +1,12 @@
+setup.py
+src/cs229_project.egg-info/PKG-INFO
+src/cs229_project.egg-info/SOURCES.txt
+src/cs229_project.egg-info/dependency_links.txt
+src/cs229_project.egg-info/top_level.txt
+src/gd_fit_affine/__init__.py
+src/gd_fit_affine/py
+src/gd_fit_affine/init_affine.py
+src/gd_fit_affine/init_affine_test.py
+src/gd_fit_affine/test_py
+src/utils/__init__.py
+src/utils/function_utils.py

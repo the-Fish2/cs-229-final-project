@@ -1,0 +1,80 @@
+.
+├── models
+│   ├── conv_model_12_5
+│   │   ├── assets
+│   │   ├── fingerprint.pb
+│   │   ├── keras_metadata.pb
+│   │   ├── saved_model.pb
+│   │   └── variables
+│   │       ├── variables.data-00000-of-00001
+│   │       └── variables.index
+│   ├── dense_800_200_acc_51
+│   │   ├── assets
+│   │   ├── fingerprint.pb
+│   │   ├── keras_metadata.pb
+│   │   ├── saved_model.pb
+│   │   └── variables
+│   │       ├── variables.data-00000-of-00001
+│   │       └── variables.index
+│   └── dense_800_200_acc_55
+│       ├── assets
+│       ├── fingerprint.pb
+│       ├── keras_metadata.pb
+│       ├── saved_model.pb
+│       └── variables
+│           ├── variables.data-00000-of-00001
+│           └── variables.index
+├── __pycache__
+│   ├── fft_gd.cpython-311.pyc
+│   ├── function_utils.cpython-312.pyc
+│   ├── function_utils.cpython-313.pyc
+│   ├── cpython-311.pyc
+│   ├── cpython-312.pyc
+│   ├── cpython-313.pyc
+│   ├── init_affine.cpython-311.pyc
+│   ├── init_affine.cpython-312.pyc
+│   └── init_affine.cpython-313.pyc
+├── src
+│   ├── complexity_estimation.ipynb
+│   ├── fft_gd.py
+│   ├── fft_gd_test.py
+│   ├── gd_fit_affine
+│   │   ├── py
+│   │   ├── init_affine.py
+│   │   ├── init_affine_test.py
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   │   ├── cpython-311.pyc
+│   │   │   ├── init_affine.cpython-311.pyc
+│   │   │   └── __init__.cpython-311.pyc
+│   │   ├── test_ipynb
+│   │   └── test_py
+│   ├── gen_data.py
+│   ├── __init__.py
+│   ├── output.png
+│   ├── parallel_gd.py
+│   ├── pls_work.py
+│   ├── __pycache__
+│   │   └── __init__.cpython-311.pyc
+│   ├── README.txt
+│   ├── requirements-gpu.txt
+│   ├── requirements.txt
+│   ├── restartingrl.py
+│   ├── rl_trial_two_no_args_ipnyb-2.py
+│   ├── RL_Trial_Two_No_Args_ipnyb-3.ipynb
+│   ├── rl_trial_two_no_args_ipnyb-3.py
+│   ├── RL_Trial_Two_No_Args_ipnyb-4.ipynb
+│   ├── Sample_RL_ipnyb-2.ipynb
+│   ├── SE_comp_1_3.pkl
+│   ├── start_tf_kernel.sh
+│   ├── STR_comp_1_3.pkl
+│   ├── utils
+│   │   ├── function_utils.py
+│   │   ├── __init__.py
+│   │   └── __pycache__
+│   │       ├── function_utils.cpython-311.pyc
+│   │       └── __init__.cpython-311.pyc
+│   └── view_all_complexity.py
+└── tmp.txt
+
+18 directories, 60 files

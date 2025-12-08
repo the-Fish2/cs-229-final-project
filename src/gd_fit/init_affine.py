@@ -1,12 +1,12 @@
 # main.py
 import numpy as np
 import sympy as sp
-from src.utils.function_utils import (
+from utils.function_utils import (
     gen_all_complexity, XS, x, gen_values, validate, plot_example, y
 )
 
 EPS = 1e-6
-RNG = np.random.default_rng(42)
+RNG = np.random.default_rng(43)
 
 
 
@@ -48,12 +48,13 @@ def validate_basic(expr, gen_values, eps=1e-8):
 
         # tan: avoid poles where cos(arg) ~ 0
         elif node.func == sp.tan:
-            try:
-                cos_vals = gen_values(sp.cos(node.args[0]))
-            except Exception:
-                return False
-            if np.any(np.abs(cos_vals) <= eps):
-                return False
+            pass
+            # try:
+            #     cos_vals = gen_values(sp.cos(node.args[0]))
+            # except Exception:
+            #     return False
+            # if np.any(np.abs(cos_vals) <= eps):
+            #     return False
 
         # Pow: common real-domain issues
         elif isinstance(node, sp.Pow):
@@ -162,7 +163,7 @@ def _log_affine_trial(arg, param_dict, rng, XS, margin=0.5):
 
     # Decide slope a (prefer small positive to avoid wild swings)
     if a_syms:
-        a_val = float(rng.uniform(0.2, 1.5))
+        a_val = rng.choice([-1, 1]) * float(rng.uniform(0.2, 10)) ## change???
         trial[a_syms[0]] = a_val
     else:
         # Use existing a if present; otherwise pick a modest positive slope
@@ -173,7 +174,7 @@ def _log_affine_trial(arg, param_dict, rng, XS, margin=0.5):
                     a_val = float(param_dict[s])
                 break
         if a_val is None:
-            a_val = float(rng.uniform(0.2, 1.5))
+            a_val = float(rng.uniform(0.2, 10)) ## change??
 
     xmin = float(np.min(XS))
     xmax = float(np.max(XS))
@@ -185,12 +186,12 @@ def _log_affine_trial(arg, param_dict, rng, XS, margin=0.5):
 
     if b_syms:
         trial[b_syms[0]] = float(rng.uniform(required_b, required_b + 2.0))
-
     return trial
 
 
 
-def init_affine_values(expr, XS, rng, max_restarts=10, local_tries=50):
+def init_affine_values(expr, XS, rng, max_restarts=100, local_tries=500):
+    
     """
     Initialize all a_i, b_i symbols recursively from inside to outside.
     At each node, after assigning local params, validate that subexpression.
@@ -201,6 +202,8 @@ def init_affine_values(expr, XS, rng, max_restarts=10, local_tries=50):
     def assign_recursive(node, param_dict):
         # 1) Initialize children first (inside -> outside)
         for arg in getattr(node, "args", ()):
+            if arg.is_Atom: continue
+            if isinstance(arg, sp.Add) or isinstance(arg, sp.Mul): continue
             if not assign_recursive(arg, param_dict):
                 return False
 
@@ -213,7 +216,7 @@ def init_affine_values(expr, XS, rng, max_restarts=10, local_tries=50):
                 trial = {}
                 for s in local_params:
                     if s.name.startswith("a"):
-                        trial[s] = float(rng.uniform(0.1, 2.0))
+                        trial[s] = rng.choice([-1, 1]) * float(rng.uniform(0.1, 10.0))
                     else:  # b*
                         trial[s] = float(rng.normal(0.0, 1.0))
 
@@ -240,5 +243,4 @@ def init_affine_values(expr, XS, rng, max_restarts=10, local_tries=50):
             filled = expr.subs(param_dict)
             if validate_node(filled, gen_values, eps=EPS):
                 return filled, param_dict
-
-    return None
+    assert(False)

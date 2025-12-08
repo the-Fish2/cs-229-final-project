@@ -1,11 +1,14 @@
 # gd_fit_affine.py
 
+import plotly.graph_objects as go
+import os
+
 import numpy as np
 import sympy as sp
 import tensorflow as tf
 import matplotlib.pyplot as plt
-from src.utils.function_utils import gen_all_complexity, XS, x, gen_values, validate, get_string
-from src.gd_fit_affine.init_affine import init_affine_values
+from utils.function_utils import gen_all_complexity, XS, x, gen_values, validate, get_string
+from init_affine import init_affine_values
 
 # -----------------------------
 # Hyperparameters
@@ -61,12 +64,76 @@ def loss_fn(pred, target, delta=1.0):
     lin = abs_err - quad 
     return tf.reduce_sum(0.5 * tf.square(quad) + delta * lin)
 
-def fit_expr(expr_template, f_sampled):
+import plotly.graph_objects as go
+import os
+def save_convergence_frames(XS, true_vals, all_preds, ind, ref_step, outdir):
+    """
+    Create one image per GD step.
+    - true_vals: green curve
+    - all_preds[k]: prediction from step k
+    - earlier curves have lower opacity
+    - x-range taken from XS
+    - y-range taken from true_vals only
+    """
+    import plotly.graph_objects as go
+    import os
+    os.makedirs(outdir, exist_ok=True)
 
-    # if 'log' not in get_string(expr_template):
-    #     return (0, 0, 1e12)
+    num_steps = len(all_preds)
+
+    fig = go.Figure()
+
+    # Green curve (true expression)
+    fig.add_trace(go.Scatter(
+        x=XS,
+        y=true_vals,
+        mode='lines',
+        line=dict(color='green'),
+        name='Target function'
+    ))
+
+    # Blue curves: add every 5th prediction step
+    for i in range(0, num_steps, 5):
+        opacity = (i + 1) / num_steps
+        fig.add_trace(go.Scatter(
+            x=XS,
+            y=all_preds[i],
+            mode='lines',
+            line=dict(color=f'rgba(0,0,255,{opacity})'),
+            showlegend=False
+        ))
+
+    # Auto x-range from XS
+    x_min, x_max = np.min(XS), np.max(XS)
+    # Auto y-range from true_vals with small padding
+    y_min, y_max = np.min(true_vals), np.max(true_vals)
+    y_pad = (y_max - y_min) * 0.05  # 5% padding
+    y_min -= y_pad
+    y_max += y_pad
+
+    fig.update_xaxes(range=[x_min, x_max])
+    fig.update_yaxes(range=[y_min, y_max])
+
+    fig.update_layout(
+        title=f"Refinement Step {ref_step}",
+        xaxis_title="x",
+        yaxis_title="f(x)",
+        width=800,
+        height=500
+    )
+
+    fig.write_image(f"{outdir}/sample_{ind:04d}.png", scale=3)
+
+def fit_expr(expr_template, f_sampled, img_path_base, hints=[]):
+
+
+    for hint in hints:
+        if hint not in get_string(expr_template):
+            return (0, 0, 1e12)
 
     print("Fitting template:", expr_template)
+    img_path = img_path_base + '_' + get_string(expr_template)
+    os.makedirs(img_path, exist_ok=True)
 
     # ---------------------------------------------------
     # Hyperparameters for multi-stage refinement
@@ -85,11 +152,14 @@ def fit_expr(expr_template, f_sampled):
     # ---------------------------------------------------
     # Helper: run GD for a fixed number of steps
     # ---------------------------------------------------
-    def run_GD(param_dict, steps):
+    img_ind = 0
+    def run_GD(param_dict, steps, img_ind, ref_step, img_path):
 
         f_tf, tf_vars = sympy_to_tf(expr_template, param_dict)
         opt = tf.keras.optimizers.Adam(GD_LEARNING_RATE)
 
+        # LOOP
+        all_preds = []
         for _ in range(steps):
             with tf.GradientTape() as tape:
                 preds = f_tf(XS_tf)
@@ -97,6 +167,12 @@ def fit_expr(expr_template, f_sampled):
 
             grads = tape.gradient(loss, list(tf_vars.values()))
             opt.apply_gradients(zip(grads, list(tf_vars.values())))
+
+            preds = f_tf(XS_tf).numpy()
+            all_preds.append(f_tf(XS_tf).numpy())
+
+        save_convergence_frames(XS, f_sampled, all_preds, img_ind, ref_step, outdir=img_path)
+        img_ind += 1
 
         # Final loss (numpy)
         preds_final = f_tf(XS_tf).numpy()
@@ -109,14 +185,15 @@ def fit_expr(expr_template, f_sampled):
     # ROUND 0 → Random initialization of all candidates
     # ---------------------------------------------------
     candidates = []
-
+    ref_step = 0
     for _ in range(INIT_CANDIDATES):
         res = init_affine_values(expr_template, XS, RNG)
         if res is None:
             continue
         _, param_dict = res
 
-        loss, params = run_GD(param_dict, STEPS_INITIAL)
+        loss, params = run_GD(param_dict, STEPS_INITIAL, img_ind=img_ind, ref_step=ref_step, img_path=img_path)
+        img_ind += 1
         candidates.append((loss, params))
 
     if not candidates:
@@ -132,6 +209,7 @@ def fit_expr(expr_template, f_sampled):
     noise = NOISE_SCALE
 
     for round_idx in range(1, ROUNDS + 1):
+        ref_step += 1
         print(f"Refinement round {round_idx}: best loss so far = {candidates[0][0]:.6f}")
 
         new_candidates = []
@@ -150,7 +228,8 @@ def fit_expr(expr_template, f_sampled):
             for k,v in best_params.items():
                 noisy_params[k] = float(v + noise * v * RNG.normal())
 
-            loss, fitted_params = run_GD(noisy_params, STEPS_REFINE)
+            loss, fitted_params = run_GD(noisy_params, STEPS_REFINE, img_ind, ref_step=ref_step, img_path=img_path)
+            img_ind += 1
             new_candidates.append((loss, fitted_params))
 
         # sort survivors
@@ -172,17 +251,17 @@ def fit_expr(expr_template, f_sampled):
 # -----------------------------
 # Main fitting function: loop over all complexities
 # -----------------------------
-def fit_best_function(f_sampled):
+def fit_best_function(f_sampled, img_path_base, search_complexity=GD_MAX_COMPLEXITY, hints=[]):
     best_overall_loss = np.inf
     best_overall_expr = None
     best_overall_params = None
 
-    for c in range(GD_MAX_COMPLEXITY + 1):
+    for c in range(search_complexity + 1):
         templates = gen_all_complexity(c)
         print(f"Complexity {c}, {len(templates)} templates")
 
         for expr_template, m in templates:
-            expr_filled, params, loss = fit_expr(expr_template, f_sampled)
+            expr_filled, params, loss = fit_expr(expr_template, f_sampled, img_path_base, hints)
             if loss < best_overall_loss:
                 best_overall_loss = loss
                 best_overall_expr = expr_filled
