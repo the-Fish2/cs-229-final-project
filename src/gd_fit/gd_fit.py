@@ -8,7 +8,7 @@ import sympy as sp
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from utils.function_utils import gen_all_complexity, XS, x, gen_values, validate, get_string
-from init_affine import init_affine_values
+from gd_fit.init_affine import init_affine_values
 
 # -----------------------------
 # Hyperparameters

@@ -2,7 +2,7 @@
 import numpy as np
 import sympy as sp
 from utils.function_utils import (
-    gen_all_complexity, XS, x, gen_values, validate, plot_example, y
+    gen_all_complexity, XS, x, gen_values, validate, plot_example, y, gen_coeff, gen_bias
 )
 
 EPS = 1e-6
@@ -163,7 +163,7 @@ def _log_affine_trial(arg, param_dict, rng, XS, margin=0.5):
 
     # Decide slope a (prefer small positive to avoid wild swings)
     if a_syms:
-        a_val = rng.choice([-1, 1]) * float(rng.uniform(0.2, 10)) ## change???
+        a_val = gen_coeff(rng) ## change???
         trial[a_syms[0]] = a_val
     else:
         # Use existing a if present; otherwise pick a modest positive slope
@@ -174,7 +174,7 @@ def _log_affine_trial(arg, param_dict, rng, XS, margin=0.5):
                     a_val = float(param_dict[s])
                 break
         if a_val is None:
-            a_val = float(rng.uniform(0.2, 10)) ## change??
+            a_val = gen_coeff(rng) ## change??
 
     xmin = float(np.min(XS))
     xmax = float(np.max(XS))
@@ -216,7 +216,7 @@ def init_affine_values(expr, XS, rng, max_restarts=100, local_tries=500):
                 trial = {}
                 for s in local_params:
                     if s.name.startswith("a"):
-                        trial[s] = rng.choice([-1, 1]) * float(rng.uniform(0.1, 10.0))
+                        trial[s] = gen_coeff(rng)
                     else:  # b*
                         trial[s] = float(rng.normal(0.0, 1.0))
 
